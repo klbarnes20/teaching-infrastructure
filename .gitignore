@@ -1,0 +1,14 @@
+# Private course data
+data/
+
+# Generated outputs
+outputs/
+
+# old architecture 
+generators/
+
+# Python cache
+__pycache__/
+
+# VS Code
+.vscode/

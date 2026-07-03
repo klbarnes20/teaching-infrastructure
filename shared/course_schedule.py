@@ -1,0 +1,34 @@
+from data.configs import COURSE_LOOKUP
+from shared.loaders import load_sections_from_csv, build_section_config
+from shared.schedule_utils import build_master_schedule
+
+
+def build_all_course_schedules(
+    sections_file="data/f2026_sections.csv",
+    terms_file="data/terms.csv"
+):
+    sections = load_sections_from_csv(
+        sections_file,
+        COURSE_LOOKUP,
+        terms_file
+    )
+
+    schedules = []
+
+    for section in sections:
+        config = build_section_config(section)
+        schedule = build_master_schedule(config)
+        schedules.append(schedule)
+
+    return schedules
+
+
+def get_schedule(course_code, section, schedules=None):
+    if schedules is None:
+        schedules = build_all_course_schedules()
+
+    for schedule in schedules:
+        if schedule["course_code"].replace(" ", "") == course_code.replace(" ", "") and schedule["section"] == section:
+            return schedule
+
+    raise ValueError(f"No schedule found for {course_code} section {section}")
