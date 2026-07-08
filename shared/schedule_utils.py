@@ -36,47 +36,6 @@ def make_week_label(row):
         return "Study Day"
     return "NA"
 
-######### CSV LOADERS 
-# def parse_holidays(holiday_string):
-
-#     holidays = []
-
-#     if not holiday_string:
-#         return holidays
-
-#     entries = holiday_string.split(";")
-
-#     for entry in entries:
-
-#         start, end, label = entry.split("|")
-
-#         holidays.append({
-#             "start": start,
-#             "end": end,
-#             "label": label
-#         })
-
-#     return holidays
-
-# def load_terms_from_csv(filepath):
-
-#     terms = {}
-
-#     with open(filepath, newline='', encoding='utf-8-sig') as csvfile:
-
-#         reader = csv.DictReader(csvfile)
-
-#         for row in reader:
-
-#             terms[row["term"]] = {
-#                 "start_date": row["start_date"],
-#                 "end_date": row["end_date"],
-#                 "term": row["term"],
-#                 "holidays": parse_holidays(row["holidays"])
-#             }
-
-#     return terms
-
 def load_term(term_id):
     return load_yaml(f"data/terms/{term_id}.yaml")
 
