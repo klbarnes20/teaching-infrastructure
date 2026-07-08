@@ -7,6 +7,7 @@ from datetime import timedelta, datetime
 import pandas as pd
 import csv
 from data.configs import *
+from shared.loaders import *
 
 WEEKDAY_NAMES = {
     0: "Monday",
@@ -17,8 +18,6 @@ WEEKDAY_NAMES = {
     5: "Saturday",
     6: "Sunday"
 } 
-
-
 
 ############ GENERIC HELPERS 
 def date_range(start, end):
@@ -38,47 +37,48 @@ def make_week_label(row):
     return "NA"
 
 ######### CSV LOADERS 
-def parse_holidays(holiday_string):
+# def parse_holidays(holiday_string):
 
-    holidays = []
+#     holidays = []
 
-    if not holiday_string:
-        return holidays
+#     if not holiday_string:
+#         return holidays
 
-    entries = holiday_string.split(";")
+#     entries = holiday_string.split(";")
 
-    for entry in entries:
+#     for entry in entries:
 
-        start, end, label = entry.split("|")
+#         start, end, label = entry.split("|")
 
-        holidays.append({
-            "start": start,
-            "end": end,
-            "label": label
-        })
+#         holidays.append({
+#             "start": start,
+#             "end": end,
+#             "label": label
+#         })
 
-    return holidays
+#     return holidays
 
-def load_terms_from_csv(filepath):
+# def load_terms_from_csv(filepath):
 
-    terms = {}
+#     terms = {}
 
-    with open(filepath, newline='', encoding='utf-8-sig') as csvfile:
+#     with open(filepath, newline='', encoding='utf-8-sig') as csvfile:
 
-        reader = csv.DictReader(csvfile)
+#         reader = csv.DictReader(csvfile)
 
-        for row in reader:
+#         for row in reader:
 
-            terms[row["term"]] = {
-                "start_date": row["start_date"],
-                "end_date": row["end_date"],
-                "term": row["term"],
-                "holidays": parse_holidays(row["holidays"])
-            }
+#             terms[row["term"]] = {
+#                 "start_date": row["start_date"],
+#                 "end_date": row["end_date"],
+#                 "term": row["term"],
+#                 "holidays": parse_holidays(row["holidays"])
+#             }
 
-    return terms
+#     return terms
 
-
+def load_term(term_id):
+    return load_yaml(f"data/terms/{term_id}.yaml")
 
 ###### SCHEDULE BUILDERS 
 
@@ -95,22 +95,22 @@ def build_section_config(section_info):
         "midterm": section_info.get("midterm", {})
     }
 
-def generate_class_schedule(start_date, end_date, class_weekday, holidays, class_time, location):
-    start = datetime.strptime(start_date, "%Y-%m-%d")
-    end = datetime.strptime(end_date, "%Y-%m-%d") 
+def generate_class_schedule(config):
+    start = config["start_date"]
+    end = config["end_date"]
     
     schedule_dates = []
     current = start
     
     while current <= end:
-        if current.weekday() == class_weekday:
+        if current.weekday() == config["class_weekday"]:
 
             is_holiday = False
             label = None
 
-            for holiday in holidays:
-                h_start = datetime.strptime(holiday["start"], "%Y-%m-%d")
-                h_end = datetime.strptime(holiday["end"], "%Y-%m-%d")
+            for holiday in config["holidays"]:
+                h_start = holiday["start"]
+                h_end = holiday["end"]
 
                 if h_start <= current <= h_end:
                     is_holiday = True
@@ -119,8 +119,8 @@ def generate_class_schedule(start_date, end_date, class_weekday, holidays, class
 
             schedule_dates.append({
                 "date": current,
-                "time": class_time,
-                "location": location,
+                "time": config["class_time"],
+                "location": config["location"],
                 "is_holiday": is_holiday,
                 "label": label
             })
@@ -129,16 +129,12 @@ def generate_class_schedule(start_date, end_date, class_weekday, holidays, class
     
     return schedule_dates
 
+#BUILD THIS LATER TO SIMPLIFY WEEK_DATA
+#def build_meeting_metadata(date_info, config)
+
 def build_master_schedule(config):
 
-    schedule_dates = generate_class_schedule(
-        config["start_date"],
-        config["end_date"],
-        config["class_weekday"],
-        config["holidays"], 
-        config["class_time"],
-        config["location"]
-    )
+    schedule_dates = generate_class_schedule(config)
 
     weeks = []
     yaml_week_index = 0
@@ -195,78 +191,28 @@ def build_master_schedule(config):
     return {
         **config,
         "weeks": weeks
-        # "course_code": config["course_code"],
-        # "course_name": config["course_name"],
-        # "section": config["section"],
-        # "term": config["term"],
-        # "weeks": weeks,
-        # "class_weekday": config["class_weekday"],
-        # "class_time": config["class_time"],
-        # "location": config["location"]
     }
 ########## SCHEDULE UTILITIES 
 
-def map_assignment_due_dates(schedule, config):
+def map_assignment_due_dates(schedule):
     due_info = {}
 
-    for row in schedule:
-        notes = row.get("notes", "")
-        if not notes:
+    for week_num, row in enumerate(schedule, start=1):
+        assignments = row.get("assignments")
+
+        if not assignments:
             continue
 
-        for assignment in config.get("assignments", []):
-            name = assignment["name"]
-            if name in notes:
-                due_info[name] = {
-                    "date": row["date"],
-                    "week": row["week"]
-                }
+        #Handle both a single string and a list 
+        if isinstance(assignments, str):
+            assignments = [assignments]
+
+        for assignments in assignments:
+            due_info[assignments] = {
+                "date": row["date"],
+                "week": week_num
+            }
 
     return due_info
 
 
-#### DISPLAY / DEBUG FUNCTIONS 
-def preview_schedule(config, successes=None, warnings=None, errors=None):
-
-
-    print("\n" + "="*70)
-
-    print(f"{config['course_code']} - {config['course_name']}")
-    print(f"Section: {config['section']}")
-    print(f"Time: {config['class_time']}")
-    print(f"Weekday: {WEEKDAY_NAMES[config['class_weekday']]}")
-    print(f"Location: {config['location']}")
-    print(f"Term: {config['term']}")
-
-    print("\n" + "-" * 70)
-    print("\nVALIDATION")
-
-    if successes:
-        for s in successes:
-            print(f"✔ {s}")
-
-    if warnings:
-        for w in warnings:
-            print(f"⚠ {w}")
-
-    if errors:
-        for e in errors:
-            print(f"✖ {e}")
-
-    print("\n" + "-" * 70)
-
-    for row in config["schedule"]:
-
-        week = row["week"]
-        date = row["date"]
-        topic = row["topic"]
-        notes = row["notes"]
-
-        print(f"Week {week:>2} | {date:<8} | {topic}")
-
-        if notes:
-            print(f"      ⚠ {notes}")
-    
-    print("=" * 70)
-
-    
