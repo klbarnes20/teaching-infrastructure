@@ -1,16 +1,14 @@
 from data.configs import COURSE_LOOKUP
-from shared.loaders import load_sections_from_csv, build_section_config
-from shared.schedule_utils import build_master_schedule
+from shared.loaders import *
+from shared.schedule_utils import *
 
 
 def build_all_course_schedules(
     sections_file="data/f2026_sections.csv",
-    terms_file="data/terms.csv"
 ):
     sections = load_sections_from_csv(
         sections_file,
-        COURSE_LOOKUP,
-        terms_file
+        COURSE_LOOKUP
     )
 
     schedules = []
