@@ -12,11 +12,13 @@ The goal is to maintain a single source of truth so that information only needs 
 
 ```text
 Course YAML
-Term CSV
+Term YAML
 Section CSV
 Policy Documents
         ↓
 Loaders
+        ↓
+Course Offering Builder
         ↓
 Master Schedule Builder
         ↓
@@ -35,14 +37,14 @@ These files define the teaching environment and should be edited directly.
 
 ## Course YAML Files
 
-Define information that remains relatively stable across offerings.
+Define information that remains relatively stable across course offerings.
 
 Examples:
 
 - Course title
 - Course description
 - Learning outcomes
-- Weekly topics
+- Weekly instructional plan
 - Readings
 - Assessments
 - Policies
@@ -60,22 +62,24 @@ MOS1033.yaml
 
 ---
 
-## Term CSV
+## Term YAML Files
 
-Defines dates and events shared across all courses within an academic term.
+Define dates and events shared across all courses within an academic term.
 
 Examples:
 
+- Term name
 - First day of classes
 - Last instructional day
-- Reading week
 - Holidays
-- Exam periods
+- Reading week
+- Exam period
 
 Examples:
 
 ```text
-terms.csv
+F2026.yaml
+W2027.yaml
 ```
 
 ---
@@ -90,7 +94,7 @@ Examples:
 - Meeting days
 - Meeting times
 - Classroom locations
-- Midterm dates
+- Midterm information
 - Delivery mode
 
 Examples:
@@ -116,71 +120,74 @@ Examples:
 
 # Shared Utilities
 
-Reusable code that supports multiple generators.
+Reusable code supporting multiple generators.
 
 ## `loaders.py`
 
-Responsible for reading and assembling source data.
+Responsible only for loading source data.
 
 Examples:
 
-- Load course YAML files
-- Load term CSV
+- Load course YAML
+- Load term YAML
 - Load section CSV
-- Build section configurations
+
+Loaders should not contain business logic.
 
 ---
 
 ## `schedule_utils.py`
 
-Responsible for schedule construction.
+Responsible for constructing and validating schedules.
 
 Examples:
 
+- Build course offerings
 - Generate class meetings
 - Apply holidays and reading weeks
 - Insert midterms
-- Merge dates with instructional content
+- Merge instructional content with calendar dates
+- Validate schedules
 - Build master schedules
 
 ---
 
 ## `course_schedule.py`
 
-Acts as the orchestration layer between configuration and generators.
+The orchestration layer for the scheduling pipeline.
 
-Examples:
+Responsibilities:
 
-- Build all course schedules
-- Retrieve schedules by course and section
-- Provide a single interface for generators
+- Load all source data
+- Build course offerings
+- Generate master schedules
+- Provide a single interface for downstream generators
 
-This file serves as the primary entry point for downstream systems.
+All generators should obtain schedules through this module rather than constructing schedules independently.
 
 ---
 
 ## `dates.py`
 
-Provides shared date and anchor calculations.
+Shared date utilities.
 
 Examples:
 
-- First class date
-- Midterm date
-- End of term
-- Relative offsets for task generation
+- Anchor dates
+- Relative date calculations
+- Date helper functions
 
 ---
 
 ## `markdown.py`
 
-Reusable Markdown helpers.
+Reusable Markdown utilities.
 
 Examples:
 
 - Heading generation
 - Checklist formatting
-- Markdown utilities
+- Markdown helpers
 
 ---
 
@@ -203,9 +210,9 @@ Examples:
 
 # Generators
 
-Generators transform completed schedules into teaching artifacts.
+Generators transform completed master schedules into teaching artifacts.
 
-Generators should consume schedules rather than building schedules themselves.
+Generators should consume schedules rather than build schedules themselves.
 
 ## Current
 
@@ -221,35 +228,36 @@ Generators should consume schedules rather than building schedules themselves.
 - Announcement Generator
 - Assignment Generator
 
-Generators should contain as little hard-coded information as possible. Most information should originate from configuration files and the schedule engine.
+Generators should contain as little hard-coded information as possible. Information should originate from the configuration files and master schedule.
 
 ---
 
 # Master Schedule
 
-The master schedule is the central object used by all generators.
+The master schedule is the central object used throughout the teaching infrastructure.
 
 It combines:
 
 ```text
 Course YAML
-    +
-Term CSV
-    +
+      +
+Term YAML
+      +
 Section CSV
 ```
 
-into a single schedule representation.
+into a complete course offering with dated instructional meetings.
 
 The master schedule is responsible for:
 
-- Mapping instructional weeks to dates
-- Skipping holidays and reading weeks
+- Mapping instructional weeks to calendar dates
+- Preserving stable instructional week numbers
+- Applying holidays and reading weeks
 - Inserting midterms
-- Providing course-specific dates
-- Maintaining stable instructional week numbers across academic years
+- Providing assignment due dates
+- Serving as the authoritative schedule consumed by all generators
 
-This object is the authoritative source of scheduling information.
+Internally, dates are stored as native Python `date` objects and formatted only when generating outputs.
 
 ---
 
@@ -266,7 +274,7 @@ Examples:
 - Future Brightspace imports
 - Future announcements
 
-Generated files should not be edited manually. Instead, update the source configuration and regenerate.
+Generated files should never be edited manually. Update the source configuration and regenerate instead.
 
 ---
 
@@ -275,10 +283,10 @@ Generated files should not be edited manually. Instead, update the source config
 | Information | Source |
 |------------|--------|
 | Course information | Course YAML |
-| Term dates and holidays | `terms.csv` |
+| Term dates, holidays, exam periods | Term YAML |
 | Section logistics | Section CSV |
 | University policies | Policy documents |
-| Weekly schedule | Master Schedule |
+| Master schedule | Schedule engine |
 | Teaching tasks | Todoist Generator |
 | Weekly teaching brief | Weekly Brief Generator |
 | Teaching reflections | Notion |
@@ -288,9 +296,11 @@ Generated files should not be edited manually. Instead, update the source config
 # Design Principles
 
 - Enter information once whenever possible.
-- Separate configuration from generation.
-- Treat schedules as a reusable intermediate layer.
+- Separate configuration from business logic.
+- Treat schedules as reusable domain objects.
+- Keep loaders responsible only for loading data.
 - Keep reusable code in shared helper modules.
 - Treat generated outputs as disposable artifacts that can always be recreated.
 - Prefer automation over duplicated manual work.
-- Generators should consume schedules, not create them.
+- Generators should consume master schedules rather than create schedules themselves.
+- Use native Python data types internally whenever possible and defer formatting until output generation.
