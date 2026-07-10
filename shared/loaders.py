@@ -21,6 +21,9 @@ def load_term(term_id):
         raise FileNotFoundError(
             f"Could not find term configuration: data/terms/{term_id}.yaml"
         )
+    
+def load_instructor(instructor_id): 
+    return load_yaml(f"data/instructors/{instructor_id}.yaml")
 
 def load_sections_from_csv(filepath, course_lookup):
 
@@ -37,6 +40,7 @@ def load_sections_from_csv(filepath, course_lookup):
                 "time": row["time"],
                 "location": row["location"],
                 "term": load_term(row["term"]),
+                "instructor": load_instructor(row["instructor"]),
 
                 "midterm": {
                     "week": int(row["midterm_week"]) if row["midterm_week"] else None,
@@ -49,3 +53,4 @@ def load_sections_from_csv(filepath, course_lookup):
             sections.append(section)
 
     return sections
+

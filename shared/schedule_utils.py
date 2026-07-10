@@ -56,6 +56,10 @@ def build_section(section_info):
     return {
         **section_info["course"],
         **section_info["term"],
+        "instructor": section_info["instructor"]["name"],
+        "email": section_info["instructor"]["email"],
+        "office": section_info["instructor"]["office"], 
+        "office_hours": section_info["instructor"]["office_hours"],
 
         "section": section_info["section"],
         "class_weekday": section_info["weekday"],
@@ -64,6 +68,7 @@ def build_section(section_info):
 
         "midterm": section_info.get("midterm", {})
     }
+    
 
 def generate_class_schedule(config):
     start = config["start_date"]
