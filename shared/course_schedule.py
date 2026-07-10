@@ -14,8 +14,8 @@ def build_all_course_schedules(
     schedules = []
 
     for section in sections:
-        config = build_section_config(section)
-        schedule = build_master_schedule(config)
+        section = build_section(section)
+        schedule = build_master_schedule(section)
         schedules.append(schedule)
 
     return schedules

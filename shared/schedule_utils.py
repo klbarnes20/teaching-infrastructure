@@ -41,7 +41,18 @@ def load_term(term_id):
 
 ###### SCHEDULE BUILDERS 
 
-def build_section_config(section_info): 
+def build_meeting_metadata(date_info, config):
+    return {
+        "date": date_info["date"],
+        "date_str": date_info["date"].strftime("%A, %B %d, %Y"),
+        "is_holiday": date_info["is_holiday"],
+        "holiday_label": date_info["label"],
+        "class_weekday": config["class_weekday"],
+        "class_time": config["class_time"],
+        "location": config["location"],
+    }
+
+def build_section(section_info): 
     return {
         **section_info["course"],
         **section_info["term"],
@@ -88,9 +99,6 @@ def generate_class_schedule(config):
     
     return schedule_dates
 
-#BUILD THIS LATER TO SIMPLIFY WEEK_DATA
-#def build_meeting_metadata(date_info, config)
-
 def build_master_schedule(config):
 
     schedule_dates = generate_class_schedule(config)
@@ -107,13 +115,7 @@ def build_master_schedule(config):
         if has_midterm and midterm_week == meeting_num:
             week_data = {
                 "week": None,
-                "date": date_info["date"],
-                "date_str": date_info["date"].strftime("%A, %B %d, %Y"),
-                "is_holiday": date_info["is_holiday"],
-                "holiday_label": date_info["label"],
-                "class_weekday": config["class_weekday"],
-                "class_time": config["class_time"],
-                "location": config["location"],
+                **build_meeting_metadata(date_info, config), 
                 "type": "midterm",
                 "topic": "Midterm Exam",
                 "readings": None,
@@ -131,13 +133,7 @@ def build_master_schedule(config):
         week_config = config["weeks"][yaml_week_index]
 
         week_data = {
-            "date": date_info["date"],
-            "date_str": date_info["date"].strftime("%A, %B %d, %Y"),
-            "is_holiday": date_info["is_holiday"],
-            "holiday_label": date_info["label"],
-            "class_weekday": config["class_weekday"],
-            "class_time": config["class_time"],
-            "location": config["location"],
+            **build_meeting_metadata(date_info, config),
             **week_config
         }
 
