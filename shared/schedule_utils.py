@@ -152,20 +152,13 @@ def build_master_schedule(config):
 def map_assignment_due_dates(schedule):
     due_info = {}
 
-    for week_num, row in enumerate(schedule, start=1):
-        assignments = row.get("assignments")
+    for row in schedule:
+        assignments = row.get("assignments") or []
 
-        if not assignments:
-            continue
-
-        #Handle both a single string and a list 
-        if isinstance(assignments, str):
-            assignments = [assignments]
-
-        for assignments in assignments:
-            due_info[assignments] = {
+        for assignment in assignments:
+            due_info[assignment] = {
                 "date": row["date"],
-                "week": week_num
+                "week": row["week"]
             }
 
     return due_info
