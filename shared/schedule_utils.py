@@ -6,7 +6,7 @@
 from datetime import timedelta, datetime
 import pandas as pd
 import csv
-from data.configs import *
+#from data.configs import *
 from shared.loaders import *
 
 WEEKDAY_NAMES = {
