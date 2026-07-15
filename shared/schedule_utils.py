@@ -65,6 +65,7 @@ def build_section(section_info):
         "class_weekday": section_info["weekday"],
         "class_time": section_info["time"],
         "location": section_info["location"], 
+        "course_policies": section_info.get("course_policies", {}),
 
         "midterm": section_info.get("midterm", {})
     }

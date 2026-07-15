@@ -25,12 +25,20 @@ def load_term(term_id):
 def load_instructor(instructor_id): 
     return load_yaml(f"data/instructors/{instructor_id}.yaml")
 
+def load_course_policies():
+    data = load_yaml("data/policies/common.yaml")
+    return data["course_policies"]
+
 def load_sections_from_csv(filepath, course_lookup):
 
     sections = []
 
+    course_policies = load_course_policies()
+
     with open(filepath, newline="", encoding="utf-8-sig") as csvfile:
         reader = csv.DictReader(csvfile)
+
+        course_policies = load_course_policies()
 
         for row in reader:
             section = {
@@ -41,6 +49,7 @@ def load_sections_from_csv(filepath, course_lookup):
                 "location": row["location"],
                 "term": load_term(row["term"]),
                 "instructor": load_instructor(row["instructor"]),
+                "course_policies": course_policies,
 
                 "midterm": {
                     "week": int(row["midterm_week"]) if row["midterm_week"] else None,
