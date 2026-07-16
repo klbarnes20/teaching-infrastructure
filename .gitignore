@@ -6,7 +6,7 @@ docs/
 outputs/
 
 # old architecture 
-generators/
+
 
 # Python cache
 __pycache__/
