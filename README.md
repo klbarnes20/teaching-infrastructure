@@ -2,55 +2,85 @@
 
 ## Purpose
 
-A collection of shared infrastructure for managing courses, generating teaching materials, and reducing repetitive work.
+Teaching Systems is a collection of shared infrastructure for managing university courses, generating teaching materials, and reducing repetitive work.
 
-The goal is to maintain a single source of truth so that information only needs to be updated once and all downstream outputs remain synchronized.
+The guiding principle is to maintain a **single source of truth** so that course information only needs to be entered once. From that shared data model, multiple teaching artifacts—including syllabi, Brightspace pages, calendars, and task lists—can be generated automatically.
+
+The project is designed around a clear separation between configuration, business logic, and output generation, making it easy to maintain and extend over time.
 
 ---
 
 # Architecture
 
 ```text
+Source Data
+───────────
 Course YAML
 Term YAML
 Section CSV
 Policy Documents
-        ↓
+
+        │
+        ▼
+
 Loaders
-        ↓
-Course Offering Builder
-        ↓
-Master Schedule Builder
-        ↓
+────────
+loaders.py
+
+        │
+        ▼
+
+Teaching Model
+──────────────
+teaching_model.py
+
+Course
+Section
+Schedule
+Course Term
+
+        │
+        ▼
+
 Generators
-        ↓
+──────────
+Brightspace
+Syllabus
+Todoist
+Calendar
+...
+
+        │
+        ▼
+
 Generated Outputs
-        ↓
-Teaching & Notion
 ```
 
 ---
 
-# Configuration (Source Data)
+# Source Data
 
-These files define the teaching environment and should be edited directly.
+Source data defines the teaching environment and should be edited directly. All generated outputs originate from these files.
 
-## Course YAML Files
+---
 
-Define information that remains relatively stable across course offerings.
+## Course YAML
 
-Examples:
+Course YAML files define information that remains relatively stable across offerings of a course.
 
-- Course title
-- Course description
-- Learning outcomes
-- Weekly instructional plan
-- Readings
-- Assessments
-- Policies
-- Textbook information
-- Notion links
-- Course-specific settings
+Examples include:
+
+* Course title
+* Course code
+* Course description
+* Learning outcomes
+* Weekly instructional plan
+* Readings
+* Assessments
+* Course policies
+* Textbook information
+* Notion links
+* Course-specific settings
 
 Examples:
 
@@ -62,18 +92,18 @@ MOS1033.yaml
 
 ---
 
-## Term YAML Files
+## Term YAML
 
-Define dates and events shared across all courses within an academic term.
+Term YAML files define dates and events shared across all courses in a particular academic term.
 
-Examples:
+Examples include:
 
-- Term name
-- First day of classes
-- Last instructional day
-- Holidays
-- Reading week
-- Exam period
+* Term name
+* First day of classes
+* Last instructional day
+* Holidays
+* Reading week
+* Exam period
 
 Examples:
 
@@ -84,18 +114,19 @@ W2027.yaml
 
 ---
 
-## Section CSV Files
+## Section CSV
 
-Define the individual offerings for a specific term.
+Section CSV files define the logistics for each individual course offering.
 
-Examples:
+Examples include:
 
-- Section numbers
-- Meeting days
-- Meeting times
-- Classroom locations
-- Midterm information
-- Delivery mode
+* Section number
+* Meeting day
+* Meeting time
+* Classroom location
+* Delivery mode
+* Midterm information
+* Instructor assignment
 
 Examples:
 
@@ -108,135 +139,142 @@ w2027_sections.csv
 
 ## Policy Documents
 
-Shared policy text used when generating syllabi and other teaching materials.
+Shared policy documents provide standardized text used across multiple teaching materials.
 
-Examples:
+Examples include:
 
-- FASS appendix
-- Academic integrity policies
-- Accessibility statements
+* FASS Appendix
+* Academic integrity policies
+* Accessibility statements
+* University-required syllabus language
 
 ---
 
-# Shared Utilities
+# Shared Modules
 
-Reusable code supporting multiple generators.
+Shared modules provide reusable functionality used throughout the project.
+
+---
 
 ## `loaders.py`
 
-Responsible only for loading source data.
+### Purpose
 
-Examples:
+Load source data into Python objects.
 
-- Load course YAML
-- Load term YAML
-- Load section CSV
+### Responsibilities
 
-Loaders should not contain business logic.
+* Read Course YAML files
+* Read Term YAML files
+* Read Section CSV files
+* Load policy documents
+* Return Python dictionaries and lists
 
----
+### Should
 
-## `schedule_utils.py`
+* Read files from disk
+* Parse configuration data
 
-Responsible for constructing and validating schedules.
+### Should Not
 
-Examples:
-
-- Build course offerings
-- Generate class meetings
-- Apply holidays and reading weeks
-- Insert midterms
-- Merge instructional content with calendar dates
-- Validate schedules
-- Build master schedules
+* Build schedules
+* Apply business logic
+* Generate output
 
 ---
 
-## `course_schedule.py`
+## `teaching_model.py`
 
-The orchestration layer for the scheduling pipeline.
+### Purpose
 
-Responsibilities:
+Construct and manage the teaching data model.
 
-- Load all source data
-- Build course offerings
-- Generate master schedules
-- Provide a single interface for downstream generators
+### Responsibilities
 
-All generators should obtain schedules through this module rather than constructing schedules independently.
+* Build section objects
+* Build schedules
+* Build course terms
+* Merge instructional content with calendar dates
+* Apply holidays and reading weeks
+* Insert midterms
+* Map assignment due dates
+* Validate schedules
+* Provide helper and accessor functions
 
----
+### Core Objects
 
-## `dates.py`
+```text
+Raw Section
+      │
+      ▼
+Section
+      │
+      ▼
+Schedule
+      │
+      ▼
+Course Term
+```
 
-Shared date utilities.
-
-Examples:
-
-- Anchor dates
-- Relative date calculations
-- Date helper functions
-
----
-
-## `markdown.py`
-
-Reusable Markdown utilities.
-
-Examples:
-
-- Heading generation
-- Checklist formatting
-- Markdown helpers
+This module represents the heart of the teaching infrastructure. All generators consume these objects rather than rebuilding schedules independently.
 
 ---
 
-Additional helper modules should contain reusable functionality rather than generator-specific logic.
+## Helper Modules
+
+Helper modules provide reusable functionality without depending on the teaching model.
+
+### `date_helpers.py`
+
+Shared utilities for working with dates.
+
+Examples include:
+
+* Date parsing
+* Date formatting
+* Relative date calculations
+* Academic calendar utilities
 
 ---
 
-# Templates
+### `html_helpers.py`
 
-Templates used when generating documents.
+Reusable HTML generation utilities.
 
-Examples:
+Examples include:
 
-- Syllabus template
-- Future email templates
-- Future announcement templates
-- Future exam templates
-
----
-
-# Generators
-
-Generators transform completed master schedules into teaching artifacts.
-
-Generators should consume schedules rather than build schedules themselves.
-
-## Current
-
-- Syllabus Generator
-- Todoist Generator
-- Weekly Brief Generator
-- Academic Calendar Generator
-
-## Future
-
-- Exam Generator
-- Brightspace Generator
-- Announcement Generator
-- Assignment Generator
-
-Generators should contain as little hard-coded information as possible. Information should originate from the configuration files and master schedule.
+* Tables
+* Headings
+* Lists
+* Formatting helpers
+* HTML escaping
 
 ---
 
-# Master Schedule
+### `markdown_helpers.py`
 
-The master schedule is the central object used throughout the teaching infrastructure.
+Reusable Markdown generation utilities.
 
-It combines:
+Examples include:
+
+* Heading generation
+* Lists
+* Checklists
+* Common Markdown formatting
+
+---
+
+Additional helper modules should provide reusable functionality rather than contain generator-specific business logic.
+
+---
+
+# Teaching Model
+
+The teaching model represents the complete state of a course offering after all source data has been combined.
+
+It is the central object used throughout the teaching infrastructure.
+
+The teaching model combines:
 
 ```text
 Course YAML
@@ -246,61 +284,125 @@ Term YAML
 Section CSV
 ```
 
-into a complete course offering with dated instructional meetings.
+into a reusable representation of a course offering.
 
-The master schedule is responsible for:
+The model consists of four primary objects:
 
-- Mapping instructional weeks to calendar dates
-- Preserving stable instructional week numbers
-- Applying holidays and reading weeks
-- Inserting midterms
-- Providing assignment due dates
-- Serving as the authoritative schedule consumed by all generators
+```text
+Raw Section
+      │
+      ▼
+Section
+      │
+      ▼
+Schedule
+      │
+      ▼
+Course Term
+```
 
-Internally, dates are stored as native Python `date` objects and formatted only when generating outputs.
+These objects provide:
+
+* Dated instructional meetings
+* Stable instructional week numbers
+* Holiday handling
+* Reading week support
+* Midterm insertion
+* Assignment due-date mapping
+* Shared metadata across sections
+
+Internally, dates are stored as native Python `date` objects and are formatted only when generating outputs.
+
+---
+
+# Templates
+
+Templates define the appearance of generated documents while keeping content separate from presentation.
+
+Examples include:
+
+* Syllabus template
+* Email templates
+* Announcement templates
+* Exam templates
+* Future report templates
+
+---
+
+# Generators
+
+Generators transform the teaching model into instructor-facing artifacts.
+
+Generators should consume the teaching model rather than recreate schedules or business logic.
+
+Current generators include:
+
+* Brightspace Generator
+* Syllabus Generator
+* Todoist Generator
+* Academic Calendar Generator
+
+Planned generators include:
+
+* Exam Generator
+* Announcement Generator
+* Assignment Generator
+* Weekly Brief Generator
+
+Generators should:
+
+* Contain minimal hard-coded information
+* Pull information from the teaching model whenever possible
+* Focus solely on presentation and formatting
 
 ---
 
 # Generated Outputs
 
-Files created automatically by generators.
+Generated outputs are disposable artifacts produced automatically by generators.
 
-Examples:
+Examples include:
 
-- Syllabi
-- Todoist imports
-- Weekly briefs
-- Academic calendars
-- Future Brightspace imports
-- Future announcements
+* Syllabi
+* Brightspace pages
+* Todoist imports
+* Academic calendars
+* Assignment instructions
+* Weekly teaching briefs
+* Future announcements
 
-Generated files should never be edited manually. Update the source configuration and regenerate instead.
+Generated outputs should never be edited manually.
+
+Instead, update the source data and regenerate the output.
 
 ---
 
-# Source of Truth
+# Single Source of Truth
 
-| Information | Source |
-|------------|--------|
-| Course information | Course YAML |
-| Term dates, holidays, exam periods | Term YAML |
-| Section logistics | Section CSV |
-| University policies | Policy documents |
-| Master schedule | Schedule engine |
-| Teaching tasks | Todoist Generator |
-| Weekly teaching brief | Weekly Brief Generator |
-| Teaching reflections | Notion |
+| Information          | Source                |
+| -------------------- | --------------------- |
+| Course information   | Course YAML           |
+| Term dates           | Term YAML             |
+| Section logistics    | Section CSV           |
+| University policies  | Policy documents      |
+| Teaching model       | `teaching_model.py`   |
+| Brightspace pages    | Brightspace Generator |
+| Syllabi              | Syllabus Generator    |
+| Todoist tasks        | Todoist Generator     |
+| Academic calendars   | Calendar Generator    |
+| Teaching reflections | Notion                |
 
 ---
 
 # Design Principles
 
-- Enter information once whenever possible.
-- Separate configuration from business logic.
-- Treat schedules as reusable domain objects.
-- Keep loaders responsible only for loading data.
-- Keep reusable code in shared helper modules.
-- Treat generated outputs as disposable artifacts that can always be recreated.
-- Prefer automation over duplicated manual work.
-- Generators should consume master schedules rather than create schedules themselves.
-- Use native Python data types internally whenever possible and defer formatting until output generation.
+* Maintain a single source of truth.
+* Separate configuration from business logic.
+* Build a reusable teaching model before generating outputs.
+* Keep loaders responsible only for loading data.
+* Keep helper modules independent of the teaching model whenever practical.
+* Treat generated outputs as disposable artifacts that can always be regenerated.
+* Prefer automation over duplicated manual work.
+* Use native Python data types internally and defer formatting until output generation.
+* Favor small, focused modules with clear responsibilities.
+* Design generators as presentation layers over the teaching model rather than independent systems.
