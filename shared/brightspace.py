@@ -137,7 +137,8 @@ def render_course_basics(course_term):
     primary = get_primary_schedule(course_term)
     meetings = get_meetings(course_term)
     html = section_heading("Course Basics")
-    
+    email = escape(primary["email"])
+
     html += """
     <table style="border-collapse: collapse; width: 100%;">
     """
@@ -147,7 +148,10 @@ def render_course_basics(course_term):
     )
 
     html += table_row("Instructor", primary["instructor"])
-    html += table_row("Email", primary["email"])
+    html += table_row(
+        "Email",
+        f'<a href="mailto:{email}">{email}</a>'
+    )    
     html += table_row("Office", primary["office"])
     html += table_row("Office Hours", primary["office_hours"])
 

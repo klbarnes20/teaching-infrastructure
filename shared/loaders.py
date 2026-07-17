@@ -88,9 +88,19 @@ def load_sections_from_csv(filepath, course_lookup):
     with open(filepath, newline="", encoding="utf-8-sig") as csvfile:
         reader = csv.DictReader(csvfile)
 
-        course_policies = load_course_policies()
-
         for row in reader:
+
+            midterm = dict(course_lookup[row["course"]].get("midterm", {}))
+
+            if row["midterm_week"]:
+                midterm["instructional_week"] = int(row["midterm_week"])
+
+            midterm.update({
+                "date": row["midterm_date"],
+                "time": row["midterm_time"],
+                "location": row["midterm_location"],
+            })
+
             section = {
                 "course": course_lookup[row["course"]],
                 "section": row["section"],
@@ -100,16 +110,9 @@ def load_sections_from_csv(filepath, course_lookup):
                 "term": load_term(row["term"]),
                 "instructor": load_instructor(row["instructor"]),
                 "course_policies": course_policies,
-
-                "midterm": {
-                    "week": int(row["midterm_week"]) if row["midterm_week"] else None,
-                    "date": row["midterm_date"],
-                    "time": row["midterm_time"],
-                    "location": row["midterm_location"]
-                }
+                "midterm": midterm,
             }
 
             sections.append(section)
 
     return sections
-

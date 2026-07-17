@@ -93,63 +93,88 @@ def make_week_label(row):
 ### Object Builders 
 
 def build_section(section_info): 
-    return {
-        **section_info["course"],
-        **section_info["term"],
-        "instructor": section_info["instructor"]["name"],
-        "email": section_info["instructor"]["email"],
-        "office": section_info["instructor"]["office"], 
-        "office_hours": section_info["instructor"]["office_hours"],
+    config = {
+    **section_info["course"],
+    **section_info["term"],
+    "instructor": section_info["instructor"]["name"],
+    "email": section_info["instructor"]["email"],
+    "office": section_info["instructor"]["office"],
+    "office_hours": section_info["instructor"]["office_hours"],
+    "section": section_info["section"],
+    "class_weekday": section_info["weekday"],
+    "class_time": section_info["time"],
+    "location": section_info["location"],
+    "course_policies": section_info.get("course_policies", {}),
+    "midterm": section_info.get("midterm", {}),
+    "meetings": [
+        {
+            "section": section_info["section"],
+            "class_weekday": section_info["weekday"],
+            "class_time": section_info["time"],
+            "location": section_info["location"],
+        }
+    ],
+}
 
-        "section": section_info["section"],
-        "class_weekday": section_info["weekday"],
-        "class_time": section_info["time"],
-        "location": section_info["location"], 
-        "course_policies": section_info.get("course_policies", {}),
+    print(config["course_code"])
+    print("RETURN has_midterm:", config.get("has_midterm"))
+    print("RETURN midterm:", config.get("midterm"))
 
-        "midterm": section_info.get("midterm", {}),
+    return config
+#     return {
+#         **section_info["course"],
+#         **section_info["term"],
+#         "instructor": section_info["instructor"]["name"],
+#         "email": section_info["instructor"]["email"],
+#         "office": section_info["instructor"]["office"], 
+#         "office_hours": section_info["instructor"]["office_hours"],
+
+#         "section": section_info["section"],
+#         "class_weekday": section_info["weekday"],
+#         "class_time": section_info["time"],
+#         "location": section_info["location"], 
+#         "course_policies": section_info.get("course_policies", {}),
+
+#         "midterm": section_info.get("midterm", {}),
+#         "has_midterm": section_info.get("has_midterm", False),
         
-        "meetings": [
-    {
-        "section": section_info["section"],
-        "class_weekday": section_info["weekday"],
-        "class_time": section_info["time"],
-        "location": section_info["location"],
-    },
-],
-    }
+#         "meetings": [
+#     {
+#         "section": section_info["section"],
+#         "class_weekday": section_info["weekday"],
+#         "class_time": section_info["time"],
+#         "location": section_info["location"],
+#     },
+# ],
+#     }
 
 def build_master_schedule(config):
-
+    
     schedule_dates = generate_class_schedule(config)
 
     weeks = []
     yaml_week_index = 0
 
-    midterm_week = config.get("midterm", {}).get("week")
-    midterm_week = int(midterm_week) if midterm_week not in (None, "", "TBD") else None
-    has_midterm = config.get("has_midterm", False)
+    for date_info in schedule_dates:
 
-    for meeting_num, date_info in enumerate(schedule_dates, start=1):
-
-        if has_midterm and midterm_week == meeting_num:
-            week_data = {
+        # Holiday row
+        if date_info["is_holiday"]:
+            weeks.append({
+                **build_meeting_metadata(date_info, config),
                 "week": None,
-                **build_meeting_metadata(date_info, config), 
-                "type": "midterm",
-                "topic": "Midterm Exam",
+                "type": "holiday",
+                "topic": date_info["label"],
                 "readings": None,
                 "assignments": None,
                 "lab": None,
                 "notes": None
-            }
-
-            weeks.append(week_data)
+            })
             continue
 
+        # Stop if we've run out of instructional weeks
         if yaml_week_index >= len(config["weeks"]):
             break
-
+        
         week_config = config["weeks"][yaml_week_index]
 
         week_data = {
@@ -157,12 +182,12 @@ def build_master_schedule(config):
             **week_config
         }
 
-        if "type" not in week_data:
-            week_data["type"] = "instruction"
+        # Default to instruction if no type was supplied
+        week_data.setdefault("type", "instruction")
 
         weeks.append(week_data)
         yaml_week_index += 1
-
+        
     return {
         **config,
         "weeks": weeks
