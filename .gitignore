@@ -6,10 +6,13 @@ docs/
 outputs/
 
 # old architecture 
-
+generators/
 
 # Python cache
 __pycache__/
 
 # VS Code
 .vscode/
+
+# test file 
+test.html
