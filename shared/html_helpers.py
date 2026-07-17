@@ -1,3 +1,25 @@
+# =============================================================================
+# html_helpers.py
+#
+# Purpose
+# -------
+# Shared HTML formatting utilities used by HTML generators.
+#
+# Responsibilities
+# ----------------
+# - Generate common HTML elements.
+# - Standardize tables, headings, and formatting.
+# - Reduce duplicated HTML across generators.
+#
+# This module SHOULD:
+# - Return HTML fragments.
+# - Hide repetitive HTML markup.
+#
+# This module should NOT:
+# - Know anything about course data.
+# - Decide what content should appear on a page.
+# =============================================================================
+
 from html import escape
 
 ### Headers 
@@ -121,3 +143,29 @@ def raw_data_row(*values):
         {''.join(cells)}
     </tr>
     """
+
+def format_textbook_citation(textbook):
+    authors = textbook.get("authors", [])
+    title = textbook.get("title", "")
+    edition = textbook.get("edition", "")
+    year = textbook.get("year", "")
+    publisher = textbook.get("publisher", "")
+
+    if not authors:
+        author_text = ""
+    elif len(authors) == 1:
+        author_text = authors[0]
+    elif len(authors) == 2:
+        author_text = f"{authors[0]} & {authors[1]}"
+    else:
+        author_text = ", ".join(authors[:-1]) + f", & {authors[-1]}"
+
+    citation = f"{author_text}. ({year}). {title}"
+
+    if edition:
+        citation += f" ({edition} edition)"
+
+    if publisher:
+        citation += f". {publisher}"
+
+    return citation + "."

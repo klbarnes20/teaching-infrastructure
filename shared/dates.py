@@ -1,3 +1,24 @@
+# =============================================================================
+# date_helpers.py
+#
+# Purpose
+# -------
+# Shared utilities for parsing, formatting, and manipulating dates.
+#
+# Responsibilities
+# ----------------
+# - Parse date strings.
+# - Format dates for display.
+# - Provide reusable date calculations.
+#
+# This module SHOULD:
+# - Work with dates.
+# - Be reusable by any generator.
+#
+# This module should NOT:
+# - Know anything about courses, schedules, or Brightspace.
+# =============================================================================
+
 from datetime import datetime
 
 

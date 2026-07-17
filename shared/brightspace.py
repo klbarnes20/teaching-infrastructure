@@ -1,3 +1,55 @@
+# =============================================================================
+# brightspace.py
+#
+# Purpose
+# -------
+# Render teaching data into Brightspace-ready HTML pages.
+#
+# Responsibilities
+# ----------------
+# - Generate complete Brightspace pages.
+# - Render individual sections of a page (course basics, textbook,
+#   assessments, schedule, policies, etc.).
+# - Convert the teaching data model into HTML using shared formatting helpers.
+#
+# This module SHOULD:
+# - Render HTML.
+# - Format data for display.
+# - Assemble page components.
+#
+# This module should NOT:
+# - Read files from disk.
+# - Build schedules or course objects.
+# - Calculate dates or modify teaching data.
+# - Write HTML files to disk.
+#
+# Input
+# -----
+# course_term
+#     A fully built course_term object from teaching_model.py.
+#
+# Output
+# ------
+# HTML strings ready to paste into or upload to Brightspace.
+#
+# Data Flow
+# ---------
+#
+# course_term
+#      │
+#      ▼
+# render_xxx()
+#      │
+#      ▼
+# HTML section
+#      │
+#      ▼
+# generate_course_info()
+#      │
+#      ▼
+# Complete Brightspace page
+# =============================================================================
+
 # Architecture
 # TODO: Brightspace generators should receive merged-course configs rather than individual-section configs.
 # TODO: Split Brightspace generators into separate page modules as the feature set grows.
@@ -38,10 +90,10 @@
 
 from datetime import date
 from html import escape
-
-
 from shared.html_helpers import *
-from shared.schedule_utils import *
+from shared.teaching_model import *
+
+### Page Builders 
 
 def generate_course_info(course_term):
     """Generate the Course Information HTML page."""
@@ -78,7 +130,7 @@ def generate_course_info(course_term):
 </body>
 </html>
 """
-
+### Section Renderers 
 
 def render_course_basics(course_term):
 
