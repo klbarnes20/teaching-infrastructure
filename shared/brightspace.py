@@ -41,12 +41,12 @@ from html import escape
 
 
 from shared.html_helpers import *
-from shared.schedule_utils import map_assignment_due_dates
+from shared.schedule_utils import *
 
-def generate_course_info(config):
+def generate_course_info(course_term):
     """Generate the Course Information HTML page."""
     
-    sections = [
+    renderers = [
         render_course_basics,
         render_learning_outcomes,
         render_textbook,
@@ -58,8 +58,8 @@ def generate_course_info(config):
 
     parts = []
 
-    for section in sections: 
-        html = section(config)
+    for renderer in renderers: 
+        html = renderer(course_term)
         if html: 
             parts.append(html)
 
@@ -80,8 +80,10 @@ def generate_course_info(config):
 """
 
 
-def render_course_basics(config):
+def render_course_basics(course_term):
 
+    primary = get_primary_schedule(course_term)
+    meetings = get_meetings(course_term)
     html = section_heading("Course Basics")
     
     html += """
@@ -89,24 +91,51 @@ def render_course_basics(config):
     """
     html += table_row(
         "Course",
-        f"{config['course_code']} {config['course_name']}"
+        f"{primary['course_code']} {primary['course_name']}"
     )
 
-    html += table_row("Instructor", config["instructor"])
-    html += table_row("Email", config["email"])
-    html += table_row("Office", config["office"])
-    html += table_row("Office Hours", config["office_hours"])
-    html += table_row("Section", config["section"])
-    html += table_row("Class Time", config["class_time"])
-    html += table_row("Location", config["location"])
+    html += table_row("Instructor", primary["instructor"])
+    html += table_row("Email", primary["email"])
+    html += table_row("Office", primary["office"])
+    html += table_row("Office Hours", primary["office_hours"])
 
-    html += "</table>"
+    if len(meetings) == 1:
+        meeting = meetings[0]
+
+        html += table_row("Section", primary["section"])
+        html += table_row("Class Time", primary["class_time"])
+        html += table_row("Location", primary["location"])
+
+        html += "</table>"
+
+    else: 
+
+        html += "</table>"
+
+        html += subsection_heading("Class Meetings")
+
+        html += """
+        <table style="border-collapse: collapse; width: 100%;">
+        """
+
+        html += table_header(
+            ["Section", "Class Time", "Location"]
+        )
+        for meeting in meetings:
+            html += data_row(
+                meeting["section"],
+                meeting["class_time"],
+                meeting["location"]
+            )
+
+        html += "</table>"
 
     return html
 
 
-def render_learning_outcomes(config): 
-    outcomes = config.get("learning_outcomes", [])
+def render_learning_outcomes(course_term): 
+    primary = get_primary_schedule(course_term)
+    outcomes = primary.get("learning_outcomes", [])
 
     if not outcomes: 
         return ""
@@ -128,8 +157,9 @@ def render_learning_outcomes(config):
     return html 
 
 
-def render_textbook(config):
-    textbook = config.get("textbook", {})
+def render_textbook(course_term):
+    primary = get_primary_schedule(course_term)
+    textbook = primary.get("textbook", {})
 
     if not textbook:
         return ""
@@ -203,9 +233,10 @@ def render_textbook(config):
     return html
 
 
-def render_assessment_table(config):
-    assignments = config.get("assignments", [])
-    schedule = config.get("weeks", [])
+def render_assessment_table(course_term):
+    primary = get_primary_schedule(course_term)
+    assignments = primary.get("assignments", [])
+    schedule = primary.get("weeks", [])
 
     if not assignments:
         return ""
@@ -293,8 +324,9 @@ def render_assessment_table(config):
     return html
 
 
-def render_course_policies(config):
-    policies = config.get("course_policies", {})
+def render_course_policies(course_term):
+    primary = get_primary_schedule(course_term)
+    policies = primary.get("course_policies", {})
 
     enabled_policies = sorted(
         (
@@ -343,8 +375,9 @@ def render_course_policies(config):
 
 
 
-def render_course_schedule(config):
-    schedule = config.get("weeks", [])
+def render_course_schedule(course_term):
+    primary = get_primary_schedule(course_term)
+    schedule = primary.get("weeks", [])
 
     if not schedule:
         return ""

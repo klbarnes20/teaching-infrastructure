@@ -8,6 +8,7 @@ import pandas as pd
 import csv
 #from data.configs import *
 from shared.loaders import *
+from itertools import groupby
 
 WEEKDAY_NAMES = {
     0: "Monday",
@@ -67,9 +68,77 @@ def build_section(section_info):
         "location": section_info["location"], 
         "course_policies": section_info.get("course_policies", {}),
 
-        "midterm": section_info.get("midterm", {})
+        "midterm": section_info.get("midterm", {}),
+        
+        "meetings": [
+    {
+        "section": section_info["section"],
+        "class_weekday": section_info["weekday"],
+        "class_time": section_info["time"],
+        "location": section_info["location"],
+    },
+],
     }
     
+def build_course_term(schedules):
+    first = schedules[0]
+
+    return {
+        "id": f"{first['course_code']}_{first['term']}", 
+        "course_code": first["course_code"],
+        "term": first["term"],
+        "schedules": schedules,
+    }
+
+def get_meetings(course_term):
+    meetings = []
+
+    for schedule in course_term["schedules"]:
+        meetings.extend(schedule["meetings"])
+
+    return meetings 
+
+def get_primary_schedule(course_term):
+    return course_term["schedules"][0]
+
+def build_all_sections(sections_file="data/f2026_sections.csv"):
+    course_lookup = load_courses()
+
+    raw_sections = load_sections_from_csv(
+        sections_file,
+        course_lookup,
+    )
+
+    return [build_section(section) for section in raw_sections]
+
+def build_all_course_schedules(sections_file="data/f2026_sections.csv"):
+    sections = build_all_sections(sections_file)
+
+    return [
+        build_master_schedule(section)
+        for section in sections
+    ]
+
+def build_all_course_terms(sections_file="data/f2026_sections.csv"):
+    schedules = build_all_course_schedules(sections_file)
+
+    schedules.sort(
+        key=lambda s: (
+            s["course_code"],
+            s["term"]
+        )
+    )
+
+    return [
+        build_course_term(list(group))
+        for _, group in groupby(
+            schedules, 
+            key=lambda s: (
+                s["course_code"],
+                s["term"]
+            )
+        )
+    ]
 
 def generate_class_schedule(config):
     start = config["start_date"]
