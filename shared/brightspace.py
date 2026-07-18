@@ -90,8 +90,10 @@
 
 from datetime import date
 from html import escape
-from shared.html_helpers import *
-from shared.teaching_model import *
+from shared.html_helpers import section_heading, subsection_heading, table_header,table_row, data_row, raw_data_row, format_cell
+from shared.teaching_model import get_primary_schedule, get_meetings, map_assignment_due_dates
+from pathlib import Path
+import markdown
 
 ### Page Builders 
 
@@ -509,3 +511,21 @@ def render_course_schedule(schedule):
     """
 
     return html
+
+
+
+def render_markdown_files(files: dict[str, str | Path]) -> dict[str, str]:
+    rendered = {}
+
+    for name, filepath in files.items():
+        path = Path(filepath)
+
+        if not path.exists():
+            raise FileNotFoundError(f"Markdown file not found: {path}")
+
+        rendered[name] = markdown.markdown(
+            path.read_text(encoding="utf-8"),
+            extensions=["extra", "sane_lists"],
+        )
+
+    return rendered
