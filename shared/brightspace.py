@@ -103,7 +103,6 @@ def generate_course_info(course_term):
         render_learning_outcomes,
         render_textbook,
         render_assessment_table,
-        render_course_schedule,
         render_course_policies
         
     ]
@@ -130,6 +129,24 @@ def generate_course_info(course_term):
 </body>
 </html>
 """
+
+def generate_schedule_page(schedule):
+    body = render_course_schedule(schedule)
+
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Course Schedule - Section {schedule["section"]}</title>
+</head>
+<body>
+
+{body}
+
+</body>
+</html>
+"""
+
 ### Section Renderers 
 
 def render_course_basics(course_term):
@@ -431,11 +448,10 @@ def render_course_policies(course_term):
 
 
 
-def render_course_schedule(course_term):
-    primary = get_primary_schedule(course_term)
-    schedule = primary.get("weeks", [])
+def render_course_schedule(schedule):
+    weeks = schedule.get("weeks", [])
 
-    if not schedule:
+    if not weeks:
         return ""
 
     headers = [
@@ -448,7 +464,7 @@ def render_course_schedule(course_term):
 
     rows = []
 
-    for item in schedule:
+    for item in weeks:
         week = "" if item.get("week") is None else str(item["week"])
         date = item["date"].strftime("%b %d")
         topic = item.get("topic", "")
@@ -466,7 +482,7 @@ def render_course_schedule(course_term):
             )
         )
 
-    html = section_heading("Tentative Course Schedule")
+    html = section_heading(f"Course Schedule - Section {schedule['section']}")
 
     html += f"""
     <table style="
