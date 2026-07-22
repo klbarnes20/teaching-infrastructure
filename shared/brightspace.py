@@ -320,7 +320,9 @@ def render_assessment_table(course_term):
 
     assignments = sorted(
         assignments,
-        key=lambda item: due_info.get(item["name"], {}).get("week", 999),
+        key=lambda item: (
+            due_info.get(item["name"], {}).get("date") or date.max
+        ),
     )
 
     rows = []

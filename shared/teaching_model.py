@@ -149,13 +149,30 @@ def build_section(section_info):
 #     }
 
 def build_master_schedule(config):
-    
+
     schedule_dates = generate_class_schedule(config)
 
     weeks = []
     yaml_week_index = 0
 
+    # Process regular meeting dates
     for date_info in schedule_dates:
+
+        exception = date_info.get("schedule_exception")
+
+        # A regular meeting replaced by an exception
+        if exception and not exception.get("consumes_week", True):
+            weeks.append({
+                **build_meeting_metadata(date_info, config),
+                "week": None,
+                "type": exception["type"],
+                "topic": exception["title"],
+                "readings": None,
+                "assignments": None,
+                "lab": None,
+                "notes": None,
+            })
+            continue
 
         # Holiday row
         if date_info["is_holiday"]:
@@ -167,30 +184,101 @@ def build_master_schedule(config):
                 "readings": None,
                 "assignments": None,
                 "lab": None,
-                "notes": None
+                "notes": None,
             })
             continue
 
-        # Stop if we've run out of instructional weeks
+        # Stop if all instructional weeks have been assigned
         if yaml_week_index >= len(config["weeks"]):
-            break
-        
+            continue
+
         week_config = config["weeks"][yaml_week_index]
 
         week_data = {
             **build_meeting_metadata(date_info, config),
-            **week_config
+            **week_config,
         }
 
-        # Default to instruction if no type was supplied
         week_data.setdefault("type", "instruction")
 
         weeks.append(week_data)
         yaml_week_index += 1
-        
+
+    # Identify dates already created from regular meetings
+    existing_dates = {
+        item["date"]
+        for item in weeks
+    }
+
+    # Add applicable exceptions outside the section's regular weekday
+    for exception in config.get("schedule_exceptions", []):
+        exception_date = pd.to_datetime(
+            exception["date"]
+        ).date()
+
+        applicable_sections = [
+            str(section)
+            for section in exception.get("sections", [])
+        ]
+
+        if (
+            str(config["section"]) in applicable_sections
+            and exception_date not in existing_dates
+            and not exception.get("consumes_week", True)
+        ):
+            weeks.append({
+                "date": exception_date,
+                "date_str": exception_date.strftime(
+                    "%A, %B %d, %Y"
+                ),
+                "week": None,
+                "type": exception["type"],
+                "topic": exception["title"],
+                "readings": None,
+                "assignments": None,
+                "lab": None,
+                "notes": None,
+                "is_holiday": False,
+                "holiday_label": None,
+                "class_weekday": exception_date.weekday(),
+                "class_time": exception.get("time"),
+                "location": exception.get("location"),
+            })
+
+            existing_dates.add(exception_date)
+
+    # Add a midterm held outside regular class meetings
+    midterm = config.get("midterm", {})
+    midterm_date = midterm.get("date")
+
+    if config.get("has_midterm") and midterm_date:
+        midterm_date = pd.to_datetime(midterm_date).date()
+
+        weeks.append({
+            "date": midterm_date,
+            "date_str": midterm_date.strftime(
+                "%A, %B %d, %Y"
+            ),
+            "week": None,
+            "type": "midterm",
+            "topic": "Midterm Exam",
+            "readings": None,
+            "assignments": ["Midterm Exam"],
+            "lab": None,
+            "notes": None,
+            "is_holiday": False,
+            "holiday_label": None,
+            "class_weekday": midterm_date.weekday(),
+            "class_time": midterm.get("time"),
+            "location": midterm.get("location"),
+        })
+
+    # Sort after all regular and special dates are present
+    weeks.sort(key=lambda item: item["date"])
+
     return {
         **config,
-        "weeks": weeks
+        "weeks": weeks,
     }
 
 def build_course_term(schedules):
@@ -271,16 +359,17 @@ def get_schedule(course_code, section, schedules=None):
 def generate_class_schedule(config):
     start = config["start_date"]
     end = config["end_date"]
-    
+
     schedule_dates = []
     current = start
-    
+
     while current <= end:
         if current.weekday() == config["class_weekday"]:
 
             is_holiday = False
             label = None
 
+            # Check term holidays
             for holiday in config["holidays"]:
                 h_start = holiday["start"]
                 h_end = holiday["end"]
@@ -290,16 +379,38 @@ def generate_class_schedule(config):
                     label = holiday["label"]
                     break
 
+            # Check course-specific schedule exceptions
+            schedule_exception = None
+
+            for exception in config.get("schedule_exceptions", []):
+                exception_date = pd.to_datetime(
+                    exception["date"]
+                ).date()
+
+                applicable_sections = [
+                    str(section)
+                    for section in exception.get("sections", [])
+                ]
+
+                if (
+                    exception_date == current
+                    and str(config["section"]) in applicable_sections
+                ):
+                    schedule_exception = exception
+                    break
+
+            # Append exactly once per regular meeting date
             schedule_dates.append({
                 "date": current,
                 "time": config["class_time"],
                 "location": config["location"],
                 "is_holiday": is_holiday,
-                "label": label
+                "label": label,
+                "schedule_exception": schedule_exception,
             })
 
         current += timedelta(days=1)
-    
+
     return schedule_dates
 
 def build_meeting_metadata(date_info, config):
