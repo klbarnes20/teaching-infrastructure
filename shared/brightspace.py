@@ -311,18 +311,13 @@ def render_textbook(course_term):
 def render_assessment_table(course_term):
     primary = get_primary_schedule(course_term)
     assignments = primary.get("assignments", [])
-    schedule = primary.get("weeks", [])
 
     if not assignments:
         return ""
 
-    due_info = map_assignment_due_dates(schedule)
-
     assignments = sorted(
         assignments,
-        key=lambda item: (
-            due_info.get(item["name"], {}).get("date") or date.max
-        ),
+        key=lambda item: item.get("due_date") or date.max
     )
 
     rows = []
@@ -334,16 +329,17 @@ def render_assessment_table(course_term):
         name = item["name"]
         weight = item["weight"]
 
-        info = due_info.get(name, {})
-        due = info.get("date", "—")
-        week = info.get("week", "—")
+        due = item.get("due_date")
 
         if isinstance(due, date):
             due = due.strftime("%B %d, %Y")
+        elif due: 
+            due = str(due)
+        else:
+            due = "—" 
 
         if group == "Participation":
             due = "Ongoing"
-            week = "—"
 
         group_label = "" if group == last_group else group
         last_group = group
@@ -353,7 +349,6 @@ def render_assessment_table(course_term):
         escape(group_label),
         escape(name),
         f"{weight}%",
-        escape(str(week)),
         escape(str(due)),
     )
 )
@@ -365,7 +360,6 @@ def render_assessment_table(course_term):
             "",
             "<strong>Total</strong>",
             f"<strong>{total_weight}%</strong>",
-            "",
             "",
         )
     )
@@ -380,13 +374,11 @@ def render_assessment_table(course_term):
         "Component",
         "Item",
         "Weight",
-        "Week",
         "Due",
     ],
     widths=[
         "18%",
         "42%",
-        "10%",
         "10%",
         "20%",
     ],
@@ -531,3 +523,56 @@ def render_markdown_files(files: dict[str, str | Path]) -> dict[str, str]:
         )
 
     return rendered
+
+def render_week_pages(course_term):
+    primary = get_primary_schedule(course_term)
+    weeks = primary.get("weeks", [])
+    assignments = primary.get("assignments", [])
+
+    assignment_lookup = {
+        assignment["name"]: assignment
+        for assignment in assignments
+        }
+    print(assignment_lookup.keys())
+
+    if not weeks: 
+        return ""
+
+    html = ""
+
+    for week in weeks:
+        if week.get("week") is None:
+                continue
+        html += section_heading(f"Week {week['week']}: {week['topic']}")
+        html += "<h3>Lecture & Lab</h3>"
+        html += f"<p><strong>Lecture:</strong> {week['topic']}</p>"
+        if week.get("lab"):
+            html += f"<p><strong>Lab:</strong> {week['lab']}</p>"
+        if week.get("readings"): 
+            html += "<h3>Readings</h3><ul>"
+
+            for reading in week["readings"]:
+                html += f"<li>{reading}</li>"
+
+            html += "</ul>"
+
+        if week.get("assignments"):
+            html += "<h3>Assignments & Deadlines</h3><ul>"
+
+            for assignment_name in week["assignments"]:
+                assignment = assignment_lookup[assignment_name]
+                due = assignment.get("due_date")
+
+            if due:
+                due_text = due.strftime("%b %d").replace(" 0", " ")
+                html += (
+                    f"<li><strong>{assignment_name}</strong> "
+                    f"(Due {due_text})</li>"
+                )
+            else:
+                html += f"<li><strong>{assignment_name}</strong></li>"
+
+        html += "</ul>"
+        html += "<hr>"
+
+    return html
