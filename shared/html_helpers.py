@@ -21,6 +21,8 @@
 # =============================================================================
 
 from html import escape
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 
 ### Headers 
 
@@ -169,3 +171,67 @@ def format_textbook_citation(textbook):
         citation += f". {publisher}"
 
     return citation + "."
+
+def add_hyperlink(paragraph, text, url):
+    part = paragraph.part
+    r_id = part.relate_to(
+        url,
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        is_external=True,
+    )
+
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("r:id"), r_id)
+
+    new_run = OxmlElement("w:r")
+    rPr = OxmlElement("w:rPr")
+
+    # Standard Word hyperlink styling
+    color = OxmlElement("w:color")
+    color.set(qn("w:val"), "0563C1")
+    rPr.append(color)
+
+    underline = OxmlElement("w:u")
+    underline.set(qn("w:val"), "single")
+    rPr.append(underline)
+
+    new_run.append(rPr)
+
+    text_element = OxmlElement("w:t")
+    text_element.text = text
+    new_run.append(text_element)
+
+    hyperlink.append(new_run)
+    paragraph._p.append(hyperlink)
+
+def get_xml_text(element):
+    parts = []
+
+    for t in element.xpath(".//w:t"):
+        text = t.text or ""
+
+        # Preserve explicitly stored whitespace
+        if t.get(qn("xml:space")) == "preserve":
+            parts.append(text)
+        else:
+            parts.append(text)
+
+    return "".join(parts)
+
+def needs_space_between(left, right):
+    if not left or not right:
+        return False
+
+    # Source already contains whitespace
+    if left[-1].isspace() or right[0].isspace():
+        return False
+
+    # No space before punctuation
+    if right[0] in ".,;:!?)]}":
+        return False
+
+    # No space after opening punctuation
+    if left[-1] in "([{":
+        return False
+
+    return True
